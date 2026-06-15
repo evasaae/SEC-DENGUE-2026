@@ -1,0 +1,39 @@
+name: Update Data Cuaca Kalbar Harian
+
+on:
+  schedule:
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-python-script:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Take all
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: true
+
+    - name: Pull Latest Data
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action Bot"
+        git pull origin main || echo "Sinkronisasi awal"
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pandas
+
+    - name: Run Data Script
+      run: python "Data Cuaca Harian Kalbar/cuaca_kalbar_jam.py"
+
+    - name: Commit dan Push Changes
+      run: |
+        git add "Data Cuaca Harian Kalbar/Data_Cuaca_Harian_Kalbar_Hari_Ini.csv"
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update Data Cuaca Harian: $(date +'%Y-%m-%d')" && git push origin HEAD:main)
