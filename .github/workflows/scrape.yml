@@ -1,0 +1,31 @@
+name: Scrape Berita DBD
+
+on:
+  schedule:
+    - cron: '0 17 * * *'  # Jam 17.00 UTC = 00.00 WIB
+  workflow_dispatch:  
+  
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: pip install feedparser pandas
+      
+      - name: Run scraper
+        run: python web-scrapping/scrap.py
+      
+      - name: Commit dan push CSV
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/berita_dbd.csv
+          git commit -m "Update berita DBD $(date '+%Y-%m-%d')" || echo "No changes"
+          git push
