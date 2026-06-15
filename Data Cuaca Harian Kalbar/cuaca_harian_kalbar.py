@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 import pandas as pd
 import requests
 
-# 1. Daftar Koordinat Resmi 14 Kabupaten/Kota di Kalimantan Barat
 WILAYAH_KALBAR = {
     "Kota Pontianak": {"lat": -0.0263, "lon": 109.3425},
     "Kota Singkawang": {"lat": 0.9114, "lon": 108.9852},
