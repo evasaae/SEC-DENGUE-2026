@@ -4,12 +4,12 @@
 SEC-DENGUE-2026/
 ├── .github/
 │   └── workflows/
-│       └── scrape.yml        # GitHub actions
+│       └── scrape.yml        
 ├── data/
-│   ├── berita_dbd.csv        # Volume berita DBD per kabupaten 
-│   ├── detail_berita.csv     # Judul, link, dan sumber berita terbaru
-│   └── last_updated.txt      # Timestamp update data terakhir
+│   ├── berita_dbd.csv        
+│   ├── detail_berita.csv     
+│   └── last_updated.txt      
 ├── web-scrapping/
-│   └── scrap.py              # Script scraping RSS 
-├── volberita.py              # Naive Bayes model in progress
+│   └── scrap.py               
+├── volberita.py              
 └── README.md
