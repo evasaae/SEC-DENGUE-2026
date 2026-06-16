@@ -1,1 +1,0 @@
-# SEC DENGUE 2026

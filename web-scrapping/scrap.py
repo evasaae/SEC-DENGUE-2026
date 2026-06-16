@@ -14,20 +14,38 @@ window = [hari_ini - timedelta(days=i) for i in range(6, -1, -1)]
 nama_hari = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu']
 
 harian = {kab: {str(d): 0 for d in window} for kab in kabupaten}
+detail_berita = []
 
 for kab in kabupaten:
-    query = f"demam berdarah {kab} kalimantan barat"
+    keywords = [
+        f"demam berdarah {kab}",
+        f"DBD {kab}",
+        f"dengue {kab} kalimantan barat"
+    ]
+    query = " OR ".join(keywords)
     url = f"https://news.google.com/rss/search?q={query.replace(' ','+')}&hl=id&gl=ID&ceid=ID:id"
     feed = feedparser.parse(url)
-    
+
     for berita in feed.entries:
         try:
             tanggal = datetime(*berita.published_parsed[:6]).date()
         except:
             continue
+
         if str(tanggal) in harian[kab]:
             harian[kab][str(tanggal)] += 1
 
+        if tanggal in window:
+            detail_berita.append({
+                'kabupaten': kab,
+                'tanggal': str(tanggal),
+                'hari': nama_hari[tanggal.weekday()],
+                'judul': berita.title,
+                'link': berita.link,
+                'sumber': berita.get('source', {}).get('title', '-')
+            })
+
+# Tabel volume
 rows = []
 for kab in kabupaten:
     row = {'Kabupaten': kab}
@@ -40,10 +58,19 @@ for kab in kabupaten:
     row['Total 7 Hari'] = total
     rows.append(row)
 
-df = pd.DataFrame(rows)
+df_volume = pd.DataFrame(rows)
+df_detail = pd.DataFrame(detail_berita)
 
-# Simpan ke CSV
 os.makedirs('data', exist_ok=True)
-df.to_csv('data/berita_dbd.csv', index=False)
-print(f"CSV disimpan: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-print(df.to_string())
+
+# Simpan timestamp
+with open('data/last_updated.txt', 'w') as f:
+    f.write(datetime.now().strftime('%Y-%m-%d %H:%M'))
+
+# Simpan CSV — tanpa last_updated
+df_volume.to_csv('data/berita_dbd.csv', index=False)
+df_detail.to_csv('data/detail_berita.csv', index=False)
+
+print(f"Selesai: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+print(f"Volume:\n{df_volume.to_string()}")
+print(f"\nDetail berita: {len(df_detail)} artikel ditemukan")
