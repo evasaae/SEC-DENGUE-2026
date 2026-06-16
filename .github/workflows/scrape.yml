@@ -2,8 +2,12 @@ name: Scrape Berita DBD
 
 on:
   schedule:
-    - cron: '0 17 * * *'  # Jam 17.00 UTC = 00.00 WIB
+    - cron: '0 17 * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - feature/news-scraper
+      - main
 
 jobs:
   scrape:
