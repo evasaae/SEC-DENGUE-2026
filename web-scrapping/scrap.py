@@ -45,7 +45,6 @@ for kab in kabupaten:
                 'sumber': berita.get('source', {}).get('title', '-')
             })
 
-# Tabel volume
 rows = []
 for kab in kabupaten:
     row = {'Kabupaten': kab}
@@ -59,15 +58,17 @@ for kab in kabupaten:
     rows.append(row)
 
 df_volume = pd.DataFrame(rows)
-df_detail = pd.DataFrame(detail_berita)
+df_volume['generated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+
+df_detail = pd.DataFrame(detail_berita) if detail_berita else pd.DataFrame(
+    columns=['kabupaten','tanggal','hari','judul','link','sumber']
+)
 
 os.makedirs('data', exist_ok=True)
 
-# Simpan timestamp
 with open('data/last_updated.txt', 'w') as f:
     f.write(datetime.now().strftime('%Y-%m-%d %H:%M'))
 
-# Simpan CSV — tanpa last_updated
 df_volume.to_csv('data/berita_dbd.csv', index=False)
 df_detail.to_csv('data/detail_berita.csv', index=False)
 
