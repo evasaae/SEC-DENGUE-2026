@@ -60,9 +60,12 @@ for kab in kabupaten:
 df_volume = pd.DataFrame(rows)
 df_volume['generated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M')
 
-df_detail = pd.DataFrame(detail_berita) if detail_berita else pd.DataFrame(
-    columns=['kabupaten','tanggal','hari','judul','link','sumber']
-)
+if detail_berita:
+    df_detail = pd.DataFrame(detail_berita)
+else:
+    df_detail = pd.DataFrame(columns=['kabupaten','tanggal','hari','judul','link','sumber'])
+
+df_detail['generated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M')
 
 os.makedirs('data', exist_ok=True)
 
