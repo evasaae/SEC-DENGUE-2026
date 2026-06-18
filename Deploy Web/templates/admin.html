@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — EWS DBD Kalbar</title>
+  <meta name="description" content="Panel Admin Dinkes/Puskesmas untuk Sistem EWS DBD Kalimantan Barat">
+  <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     PIN SCREEN
+══════════════════════════════════════════════════════════ -->
+<div id="pin-screen">
+  <div class="pin-card">
+    <div class="pin-logo">🏥</div>
+    <div class="pin-title">Admin Panel Dinkes</div>
+    <div class="pin-subtitle">Masukkan PIN 4 digit untuk akses</div>
+
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="dot-0"></div>
+      <div class="pin-dot" id="dot-1"></div>
+      <div class="pin-dot" id="dot-2"></div>
+      <div class="pin-dot" id="dot-3"></div>
+    </div>
+
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pressKey(1)">1</button>
+      <button class="pin-key" onclick="pressKey(2)">2</button>
+      <button class="pin-key" onclick="pressKey(3)">3</button>
+      <button class="pin-key" onclick="pressKey(4)">4</button>
+      <button class="pin-key" onclick="pressKey(5)">5</button>
+      <button class="pin-key" onclick="pressKey(6)">6</button>
+      <button class="pin-key" onclick="pressKey(7)">7</button>
+      <button class="pin-key" onclick="pressKey(8)">8</button>
+      <button class="pin-key" onclick="pressKey(9)">9</button>
+      <button class="pin-key del" onclick="deleteKey()">⌫</button>
+      <button class="pin-key zero" onclick="pressKey(0)">0</button>
+      <button class="pin-key" onclick="clearPin()" style="color:var(--text-muted);font-size:0.75rem">CLR</button>
+    </div>
+
+    <div class="pin-error" id="pin-error"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     ADMIN APP
+══════════════════════════════════════════════════════════ -->
+<div id="admin-app">
+
+  <!-- TOPBAR -->
+  <div class="admin-topbar">
+    <div class="admin-topbar-brand">
+      🏥 Admin Panel
+      <span class="admin-badge">DINKES</span>
+    </div>
+    <div class="admin-spacer"></div>
+    <div class="topbar-time" id="admin-clock" style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text-secondary)">--:--:--</div>
+    <button class="btn-back" onclick="window.location.href='/'">← Dashboard Publik</button>
+    <button class="admin-logout" onclick="logout()">🔒 Keluar</button>
+  </div>
+
+  <div class="admin-content">
+
+    <!-- ════════════════════════════════
+         SECTION: SIAGA — PE PANEL
+    ════════════════════════════════ -->
+    <div class="section-header">
+      <div class="section-title">🔴 Wilayah SIAGA — Penyelidikan Epidemiologi (PE)</div>
+      <span class="section-badge" id="siaga-count-badge">0 Wilayah</span>
+    </div>
+
+    <div class="siaga-grid" id="siaga-grid">
+      <div class="admin-loading">
+        <div class="loader-ring"></div>
+        Memuat data SIAGA...
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════
+         SECTION: WASPADA — FOGGING CONTROL
+    ════════════════════════════════ -->
+    <div class="waspada-section">
+      <div class="section-header" style="margin-bottom:16px">
+        <div class="section-title">🟡 Kontrol Intervensi — Fogging & Risiko</div>
+        <span style="font-size:0.75rem;color:var(--text-secondary)">
+          ✅ Fogging mengurangi 85% bobot risiko sosial
+        </span>
+      </div>
+
+      <table class="fogging-table">
+        <thead>
+          <tr>
+            <th>Kabupaten / Kota</th>
+            <th>Status</th>
+            <th>Suhu</th>
+            <th>Berita</th>
+            <th>Analisis Proaktif</th>
+            <th>Hapus / Undo</th>
+            <th>Status Fogging</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="fogging-tbody">
+          <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Memuat...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /admin-content -->
+</div><!-- /admin-app -->
+
+<!-- TOAST -->
+<div class="toast-container" id="toast-container"></div>
+
+<script src="/static/admin.js"></script>
+</body>
+</html>

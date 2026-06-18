@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EWS DBD Kalbar — Dashboard Real-Time</title>
+  <meta name="description" content="Sistem Peringatan Dini Demam Berdarah Dengue Provinsi Kalimantan Barat berbasis Gaussian Naive Bayes">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     TOPBAR
+══════════════════════════════════════════════════════════ -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-icon">🦟</div>
+    <div class="logo-text">EWS <span>DBD</span> Kalbar</div>
+  </div>
+
+  <div class="topbar-badge">
+    <div class="dot"></div>
+    <span id="live-status">Live · Memuat data...</span>
+  </div>
+
+  <div class="topbar-spacer"></div>
+
+  <div class="topbar-time" id="clock">--:--:--</div>
+
+  <button class="btn-admin" onclick="window.location.href='/admin'">
+    🏥 Admin Dinkes
+  </button>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     STATS BAR
+══════════════════════════════════════════════════════════ -->
+<div class="app-layout">
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-icon green">🟢</div>
+      <div class="stat-info">
+        <div class="stat-value green" id="stat-aman">–</div>
+        <div class="stat-label">Wilayah AMAN</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon yellow">🟡</div>
+      <div class="stat-info">
+        <div class="stat-value yellow" id="stat-waspada">–</div>
+        <div class="stat-label">Wilayah WASPADA</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon red">🔴</div>
+      <div class="stat-info">
+        <div class="stat-value red" id="stat-siaga">–</div>
+        <div class="stat-label">Wilayah SIAGA</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">⚡</div>
+      <div class="stat-info">
+        <div class="stat-value purple" id="stat-golden">–</div>
+        <div class="stat-label">Golden Window Alert</div>
+      </div>
+    </div>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadData()">
+      <span class="spin-icon">🔄</span>
+      Refresh Data
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════════════════════════ -->
+  <div class="content-area">
+
+    <!-- MAP PANEL -->
+    <div class="map-panel">
+      <div class="map-header">
+        <div class="map-title-badge">🗺️ Peta Risiko DBD — Kalbar</div>
+        <div class="map-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#00e87a"></div> AMAN</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ffd60a"></div> WASPADA</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ff2d55"></div> SIAGA</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ff8800"></div> Golden Window</div>
+        </div>
+      </div>
+      <div id="map"></div>
+
+      <!-- Loading overlay -->
+      <div class="loading-overlay" id="map-loading">
+        <div class="loader-ring"></div>
+        <div class="loading-text">Memuat model & data Git...<br>Mohon tunggu sebentar</div>
+      </div>
+    </div>
+
+    <!-- TABLE PANEL -->
+    <div class="table-panel">
+      <div class="table-header">
+        <h2>📊 Analisis Dinamis Proaktif</h2>
+        <input type="text" class="table-search" id="search-input"
+               placeholder="🔍 Cari wilayah..." oninput="filterTable()">
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Wilayah</th>
+              <th>Status</th>
+              <th>Suhu</th>
+              <th>Berita</th>
+              <th>Analisis Proaktif</th>
+              <th>Drift Risk</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- Dynamic list created by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- GOLDEN WINDOW SIDEBAR (toggle open/close) -->
+    <div class="golden-sidebar" id="golden-sidebar">
+  <div class="golden-header">
+    <div class="golden-icon">🔔</div>
+    <div class="golden-title">⚡ GOLDEN WINDOW WARNING</div>
+    <button class="golden-close" onclick="toggleGolden()">✕</button>
+  </div>
+  <div class="golden-body">
+    <div class="golden-warning-desc">
+      Wilayah berikut dalam fase <b>WASPADA</b> dengan laju pergeseran risiko <b>kritis (&ge;50% Menuju SIAGA)</b>. Diperlukan tindakan preemptif segera!
+    </div>
+    <div class="golden-area-list" id="golden-areas">
+      <!-- Dynamic list created by JS -->
+    </div>
+  </div>
+</div>
+<!-- Toggle tab (selalu tampil saat ada golden window) -->
+<button class="golden-tab" id="golden-tab" onclick="toggleGolden()">
+  <span class="golden-tab-icon">⚡</span>
+  <span class="golden-tab-count" id="golden-tab-count">0</span>
+</button>
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL — ABATE
+ ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-abate">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>🧪</span>
+      <h3>Perintah Preemptive Abatization</h3>
+      <button class="modal-close" onclick="closeModal('abate')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(255,136,0,0.06); border:1px solid rgba(255,136,0,0.15); border-radius:12px; padding:16px; margin-bottom:16px;">
+        <span style="font-size:0.8rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em;">Wilayah Target</span>
+        <h2 id="abate-wilayah" style="font-size:1.4rem; color:var(--orange); font-weight:700; margin-top:2px;">—</h2>
+      </div>
+      <p style="margin-bottom:16px; font-size:0.88rem; line-height:1.5;">Sistem mendeteksi eskalasi risiko kritis. Tindakan preventif berikut direkomendasikan:</p>
+      <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;">
+        <div style="font-weight:700;color:var(--text-primary);margin-bottom:10px;font-size:0.85rem;display:flex;align-items:center;gap:6px;">📦 Rencana Logistik Puskesmas:</div>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;font-size:0.82rem;color:var(--text-secondary);">
+          <li style="display:flex;align-items:flex-start;gap:6px;"><span style="color:var(--green)">✓</span> Kirim bubuk <b>Abate (Temephos)</b> ke Puskesmas target</li>
+          <li style="display:flex;align-items:flex-start;gap:6px;"><span style="color:var(--green)">✓</span> Target: Membunuh jentik berumur <b>3–4 hari</b> dalam air</li>
+          <li style="display:flex;align-items:flex-start;gap:6px;"><span style="color:var(--green)">✓</span> Koordinasi penyaluran logistik dalam <b>2 jam ke depan</b></li>
+        </ul>
+      </div>
+      <button class="action-confirm-btn orange" onclick="confirmAbate()">
+        ✅ Konfirmasi & Catat Perintah
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL — BROADCAST BLAST
+ ══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-broadcast">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>📲</span>
+      <h3>Simulasi Broadcast Blast</h3>
+      <button class="modal-close" onclick="closeModal('broadcast')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(0, 232, 122, 0.06); border:1px solid rgba(0, 232, 122, 0.15); border-radius:12px; padding:16px; margin-bottom:16px;">
+        <span style="font-size:0.8rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em;">Wilayah Sasaran</span>
+        <h2 id="broadcast-wilayah-title" style="font-size:1.4rem; color:var(--green); font-weight:700; margin-top:2px;">—</h2>
+      </div>
+      <p style="margin-bottom:12px; font-size:0.88rem;">Pesan Whatsapp berikut akan disimulasikan dikirimkan ke warga di wilayah terdampak:</p>
+      <div style="background:#0a0f1d;border:1px solid #128C7E;border-radius:12px;padding:16px;margin-bottom:20px;font-family:'Courier New',Courier,monospace;font-size:0.78rem;color:#e2e8f0;line-height:1.7;box-shadow:inset 0 2px 8px rgba(0,0,0,0.5);">
+        ⚠️ <b>PERINGATAN KESEHATAN — DINKES KALBAR</b><br><br>
+        Sistem EWS DBD mendeteksi risiko tinggi di wilayah Anda.<br><br>
+        <b>🦟 Lakukan PSN (10 Menit):</b><br>
+        • Kuras & tutup bak mandi<br>
+        • Buang genangan air<br>
+        • Kubur/lipat barang bekas<br><br>
+        Jentik yang ada BELUM memiliki sayap. Basmi sekarang sebelum terlambat!<br><br>
+        Info: Dinkes Kalbar | <span id="blast-wilayah" style="color:var(--yellow);font-weight:700;">—</span>
+      </div>
+      <button class="action-confirm-btn green" onclick="confirmBroadcast()">
+        📲 Simulasikan Pengiriman Blast
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TOAST CONTAINER
+══════════════════════════════════════════════════════════ -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════════════════════════ -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+1. pada sidebar golden window warning, itu adalah pemberitahuan tentang Tindakan yang bisa diambil jika sebuah wilayah ke fase waspada. IMHO, abate mungkin masih perlu dipertimbangkan karna dapat membebani suatu pihak jika waspada lumayan sering terjadi. namun untuk blast mungkin bisa kita pertimbangkan (otomatisasi info melalui broadcast WA) namun fitur ini juga bisa jadi dihilangkan sepenuhnya (jika yang lain ada ide, bisa kita bicarakan lagi)
+2. untuk saat ini hanya menampilkan info tentang status, suhu, jumlah berita, analisis, dan drift risk.
+3. sudah di sinkronasikan dengan git (otomatis mengambil data cuaca dan berita) (semoga berhasil, wajib dicek Kembali)
+4. ada bagian admin, dengan pw "4321"
+5. untuk wilayah yang masuk ke bagian siaga, terdapat perintah untuk dilakukan pengecekan dan fogging (yang menentukan fogging adalah pidah dinkesnya), dan jika sudah melakukan fogging, terdapat pengurangan resiko sebesar 85% (bisa dibicarakan lagi, apakah mau 85% atau menggunakan rumus)
