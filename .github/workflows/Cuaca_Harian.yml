@@ -2,23 +2,18 @@ name: Update Data Cuaca Kalbar Harian
 
 on:
   schedule:
-    - cron: '0 17 * * *'
-  workflow_dispatch:
+    - cron: '0 17 * * *' # Tepat pukul 00.00 WIB
+  workflow_dispatch: 
 
 jobs:
   run-python-script:
     runs-on: ubuntu-latest
     steps:
-    - name: Take all
+    - name: Checkout Repositori
       uses: actions/checkout@v4
       with:
         persist-credentials: true
-
-    - name: Pull Latest Data
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action Bot"
-        git pull origin main || echo "Sinkronisasi awal"
+        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -28,12 +23,25 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests pandas
+        pip install requests pandas openpyxl
 
     - name: Run Data Script
-      run: python "Data Cuaca Harian Kalbar/cuaca_kalbar_jam.py"
-
-    - name: Commit dan Push Changes
       run: |
+        cd "Data Cuaca Harian Kalbar"
+        python cuaca_kalbar_jam.py
+
+    - name: Commit dan Push Perubahan Data
+      run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action Bot"
+        
+        git pull origin main --rebase
+        
         git add "Data Cuaca Harian Kalbar/Data_Cuaca_Harian_Kalbar_Hari_Ini.csv"
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Update Data Cuaca Harian: $(date +'%Y-%m-%d')" && git push origin HEAD:main)
+        
+        if ! git diff --cached --quiet; then
+          git commit -m "Update Data Cuaca Harian: $(date +'%Y-%m-%d %H:%M:%S')"
+          git push origin HEAD:main
+        else
+          echo "Tidak ada perubahan data cuaca harian terbaru untuk di-commit hari ini."
+        fi
