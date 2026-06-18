@@ -2,7 +2,7 @@ name: Update Data Cuaca Kalbar Harian
 
 on:
   schedule:
-    - cron: '0 17 * * *' # Tepat pukul 00.00 WIB
+    - cron: '40 17 * * *' 
   workflow_dispatch: 
 
 jobs:
@@ -26,15 +26,9 @@ jobs:
         pip install requests pandas openpyxl
 
     - name: Run Data Script
-<<<<<<< HEAD
-      run: python "Data Cuaca Harian Kalbar/cuaca_harian_kalbar.py"
-
-    - name: Commit dan Push Changes
-=======
->>>>>>> 24e94b6da363a8c049594a15561938afe7e6e351
       run: |
         cd "Data Cuaca Harian Kalbar"
-        python cuaca_kalbar_jam.py
+        python cuaca_harian_kalbar.py
 
     - name: Commit dan Push Perubahan Data
       run: |
