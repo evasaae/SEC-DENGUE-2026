@@ -2,7 +2,7 @@ name: Update Data Cuaca Kalbar Harian
 
 on:
   schedule:
-    - cron: '40 17 * * *' 
+    - cron: '00 17 * * *' 
   workflow_dispatch: 
 
 jobs:
@@ -37,7 +37,7 @@ jobs:
         
         git pull origin main --rebase
         
-        git add "Data Cuaca Harian Kalbar/Data_Cuaca_Harian_Kalbar_Hari_Ini.csv"
+        git add "Data Cuaca Harian Kalbar/"
         
         if ! git diff --cached --quiet; then
           git commit -m "Update Data Cuaca Harian: $(date +'%Y-%m-%d %H:%M:%S')"
