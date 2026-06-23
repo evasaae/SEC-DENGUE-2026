@@ -2,8 +2,11 @@ name: Update Data Cuaca Kalbar Harian
 
 on:
   schedule:
-    - cron: '00 17 * * *' 
+    - cron: '47 15 * * *' 
   workflow_dispatch: 
+
+#permissions:
+# contents: write (jika workflow permissionsnya read only)
 
 jobs:
   run-python-script:
@@ -35,12 +38,11 @@ jobs:
         git config --global user.email "action@github.com"
         git config --global user.name "GitHub Action Bot"
         
-        git pull origin main --rebase
-        
         git add "Data Cuaca Harian Kalbar/"
         
         if ! git diff --cached --quiet; then
           git commit -m "Update Data Cuaca Harian: $(date +'%Y-%m-%d %H:%M:%S')"
+          git pull origin main --rebase
           git push origin HEAD:main
         else
           echo "Tidak ada perubahan data cuaca harian terbaru untuk di-commit hari ini."
