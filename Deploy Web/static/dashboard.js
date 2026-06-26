@@ -27,6 +27,14 @@ const colors = {
   GOLDEN: '#ff8800'
 };
 
+function getStatusClass(statusStr) {
+  if (!statusStr) return 'AMAN';
+  const s = statusStr.toUpperCase();
+  if (s.includes('SIAGA')) return 'SIAGA';
+  if (s.includes('WASPADA')) return 'WASPADA';
+  return 'AMAN';
+}
+
 // Start Clock
 setInterval(() => {
   const now = new Date();
@@ -91,7 +99,7 @@ async function updateMapLayer() {
           const status = data ? data.status : 'AMAN';
           
           return {
-            fillColor: colors[status] || colors.AMAN,
+            fillColor: colors[getStatusClass(status)] || colors.AMAN,
             weight: 2,
             opacity: 1,
             color: 'white',
@@ -129,7 +137,7 @@ async function updateMapLayer() {
       const status = data ? data.status : 'AMAN';
       
       return {
-        fillColor: colors[status] || colors.AMAN,
+        fillColor: colors[getStatusClass(status)] || colors.AMAN,
         fillOpacity: 0.6
       };
     });
@@ -151,9 +159,10 @@ function getFeatureName(feature) {
 function updateStats(data) {
   let aman = 0, waspada = 0, siaga = 0, golden = 0;
   data.forEach(d => {
-    if(d.status === 'AMAN') aman++;
-    else if(d.status === 'WASPADA') waspada++;
-    else if(d.status === 'SIAGA') siaga++;
+    const sClass = getStatusClass(d.status);
+    if(sClass === 'AMAN') aman++;
+    else if(sClass === 'WASPADA') waspada++;
+    else if(sClass === 'SIAGA') siaga++;
     if(d.golden_window) golden++;
   });
   
@@ -173,16 +182,18 @@ function renderTable(data) {
     const tr = document.createElement('tr');
     if(d.golden_window) tr.classList.add('golden-row');
     
+    const statusClass = getStatusClass(d.status).toLowerCase();
+    
     tr.innerHTML = `
       <td>${d.kabupaten}</td>
-      <td><span class="badge badge-${d.status.toLowerCase()}">${d.status}</span></td>
+      <td><span class="badge badge-${statusClass}">${d.status}</span></td>
       <td>${d.suhu}°C</td>
       <td>${d.berita}</td>
       <td style="font-size:0.8rem">${d.analisis_proaktif}</td>
       <td>
         <div class="progress-bar-container">
           <div class="progress-bar-bg">
-            <div class="progress-bar bar-${d.status.toLowerCase()}" style="width: ${d.persen_drift}%"></div>
+            <div class="progress-bar bar-${statusClass}" style="width: ${d.persen_drift}%"></div>
           </div>
           <span class="progress-text">${d.persen_drift}%</span>
         </div>

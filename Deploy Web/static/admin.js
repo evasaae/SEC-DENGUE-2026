@@ -6,6 +6,14 @@ const PIN = '4321';
 let currentPin = '';
 let isAuthenticated = localStorage.getItem('admin_auth') === 'true';
 
+function getStatusClass(statusStr) {
+  if (!statusStr) return 'AMAN';
+  const s = statusStr.toUpperCase();
+  if (s.includes('SIAGA')) return 'SIAGA';
+  if (s.includes('WASPADA')) return 'WASPADA';
+  return 'AMAN';
+}
+
 // Elements
 const pinScreen = document.getElementById('pin-screen');
 const adminApp = document.getElementById('admin-app');
@@ -97,7 +105,7 @@ async function loadAdminData() {
 }
 
 function renderSiaga(data) {
-  const siagaAreas = data.filter(d => d.status === 'SIAGA');
+  const siagaAreas = data.filter(d => d.status.toUpperCase().includes('SIAGA'));
   const grid = document.getElementById('siaga-grid');
   document.getElementById('siaga-count-badge').textContent = `${siagaAreas.length} Wilayah`;
   
@@ -120,9 +128,11 @@ function renderSiaga(data) {
       ? `<button class="btn-pe" style="background:rgba(255, 45, 85, 0.1); border: 1px solid rgba(255, 45, 85, 0.3); color:var(--red);" onclick="confirmToggleFogging('${d.kabupaten}', true)">🗑️ Hapus Catatan Fogging</button>` 
       : `<button class="btn-pe" style="background:var(--red);" onclick="confirmToggleFogging('${d.kabupaten}', false)">🔥 Catat Fogging Fokus Selesai</button>`;
     
+    const statusClass = getStatusClass(d.status).toLowerCase();
+    
     html += `
       <div class="siaga-card">
-        <span class="badge badge-${d.status.toLowerCase()}" style="float: right;">${d.status}</span>
+        <span class="badge badge-${statusClass}" style="float: right;">${d.status}</span>
         <h3>${d.kabupaten}</h3>
         <p style="margin-bottom: 8px; font-size: 0.85rem; color: var(--text-secondary);">
           Suhu: ${d.suhu}°C | Berita: ${d.berita}
@@ -141,7 +151,7 @@ function renderFogging(data) {
   const tbody = document.getElementById('fogging-tbody');
   tbody.innerHTML = '';
   
-  const activeOrSiaga = data.filter(d => d.status === 'SIAGA' || d.fogging_active);
+  const activeOrSiaga = data.filter(d => d.status.toUpperCase().includes('SIAGA') || d.fogging_active);
   
   if (activeOrSiaga.length === 0) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-secondary)">Tidak ada wilayah SIAGA atau intervensi aktif saat ini.</td></tr>`;
@@ -153,7 +163,7 @@ function renderFogging(data) {
     const tr = document.createElement('tr');
     
     // Only SIAGA can perform fogging. If it is already fogging, action button is not shown.
-    const actionBtn = (d.status === 'SIAGA' && !isFogging)
+    const actionBtn = (d.status.toUpperCase().includes('SIAGA') && !isFogging)
       ? `<button class="btn-fogging" onclick="confirmToggleFogging('${d.kabupaten}', false)">🔥 Mulai Fogging</button>`
       : '-';
       
@@ -162,9 +172,11 @@ function renderFogging(data) {
       ? `<button class="btn-undo" onclick="confirmToggleFogging('${d.kabupaten}', true)">🗑️ Hapus</button>`
       : '-';
 
+    const statusClass = getStatusClass(d.status).toLowerCase();
+
     tr.innerHTML = `
       <td>${d.kabupaten}</td>
-      <td><span class="badge badge-${d.status.toLowerCase()}">${d.status}</span></td>
+      <td><span class="badge badge-${statusClass}">${d.status}</span></td>
       <td>${d.suhu}°C</td>
       <td>${d.berita}</td>
       <td>${d.analisis_proaktif}</td>
