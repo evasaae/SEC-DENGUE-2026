@@ -15,18 +15,24 @@ nama_hari = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu']
 
 harian = {kab: {str(d): 0 for d in window} for kab in kabupaten}
 detail_berita = []
+kata_kunci_dbd = ['dbd', 'demam berdarah', 'dengue', 'aedes', 'fogging', 'nyamuk']
 
 for kab in kabupaten:
     keywords = [
-        f"demam berdarah {kab}",
-        f"DBD {kab}",
-        f"dengue {kab} kalimantan barat"
+        f"DBD {kab} kalimantan barat",
+        f"demam berdarah dengue {kab}",
+        f"wabah DBD {kab}"
     ]
     query = " OR ".join(keywords)
     url = f"https://news.google.com/rss/search?q={query.replace(' ','+')}&hl=id&gl=ID&ceid=ID:id"
     feed = feedparser.parse(url)
 
     for berita in feed.entries:
+        judul_lower = berita.title.lower()
+
+        if not any(kata in judul_lower for kata in kata_kunci_dbd):
+            continue
+
         try:
             tanggal = datetime(*berita.published_parsed[:6]).date()
         except:

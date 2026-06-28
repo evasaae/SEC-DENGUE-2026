@@ -15,7 +15,7 @@ from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 # ==================================================================
 # CONFIG PATH — Sumber dari SEC-DENGUE-2026
 # ==================================================================
-JALUR_EXCEL = r"D:\SATRIA DATA\SEC-DENGUE-2026\SEC13 SATRIA DATA 2026 REMINDER.xlsx"
+JALUR_EXCEL = r"C:\Users\user\SIGAP-DBD\Deploy Web\SEC13 SATRIA DATA 2026 REMINDER.xlsx"
 URL_BERITA  = "https://raw.githubusercontent.com/evasaae/SEC-DENGUE-2026/main/data/berita_dbd.csv"
 URL_CUACA   = "https://raw.githubusercontent.com/evasaae/SEC-DENGUE-2026/main/Data%20Cuaca%20Harian%20Kalbar/Data_Cuaca_Harian_Kalbar_Hari_Ini.csv"
 
