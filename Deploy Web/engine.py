@@ -36,6 +36,7 @@ else:
     DATASET_TRAINING = os.path.join(PARENT_DIR, "dataset_tahunan.xlsx")
 URL_BERITA  = "https://raw.githubusercontent.com/evasaae/SEC-DENGUE-2026/main/data/berita_dbd.csv"
 URL_CUACA   = "https://raw.githubusercontent.com/evasaae/SEC-DENGUE-2026/main/Data%20Cuaca%20Harian%20Kalbar/Data_Cuaca_Harian_Kalbar_Hari_Ini.csv"
+URL_DETAIL  = "https://raw.githubusercontent.com/evasaae/SEC-DENGUE-2026/main/data/detail_berita.csv"
 
 # ==================================================================
 # HELPER FUNCTIONS
@@ -106,6 +107,70 @@ def run_model(fogging_overrides=None):
             peta_berita = dict(zip(df_git_berita['Key'], df_git_berita[total_col]))
         except Exception as e:
             errors.append(f"Parse berita error: {e}")
+
+    peta_detail_berita = {}
+    
+    # 1. Coba baca detail berita lokal
+    local_detail = os.path.join(PARENT_DIR, "data", "detail_berita.csv")
+    df_local_detail = None
+    if os.path.exists(local_detail):
+        try:
+            df_local_detail = pd.read_csv(local_detail)
+        except Exception as e:
+            errors.append(f"Gagal membaca detail berita lokal: {e}")
+            
+    # 2. Coba unduh detail berita daring
+    df_url_detail = None
+    try:
+        df_url_detail = pd.read_csv(URL_DETAIL, timeout=5)
+    except Exception as e:
+        errors.append(f"Gagal mengunduh detail berita: {e}")
+        
+    # 3. Bandingkan tanggal terbaru jika keduanya berhasil didapatkan
+    df_git_detail = None
+    if df_local_detail is not None and df_url_detail is not None:
+        try:
+            gen_col = [c for c in df_local_detail.columns if 'generated' in c.lower() or 'at' in c.lower()]
+            if gen_col:
+                local_max = pd.to_datetime(df_local_detail[gen_col[0]]).max()
+                url_max = pd.to_datetime(df_url_detail[gen_col[0]]).max()
+                if local_max >= url_max:
+                    df_git_detail = df_local_detail
+                else:
+                    df_git_detail = df_url_detail
+            else:
+                df_git_detail = df_local_detail
+        except Exception as e:
+            errors.append(f"Gagal membandingkan detail berita: {e}")
+            df_git_detail = df_local_detail
+    elif df_local_detail is not None:
+        df_git_detail = df_local_detail
+    elif df_url_detail is not None:
+        df_git_detail = df_url_detail
+        
+    # 4. Parsing dan kelompokkan berita per wilayah
+    if df_git_detail is not None:
+        try:
+            df_git_detail.columns = [re.sub(r'[^\x00-\x7F]+', ' ', col).strip() for col in df_git_detail.columns]
+            kab_col_det = [col for col in df_git_detail.columns if 'kabupaten' in col.lower() or 'wilayah' in col.lower() or 'kab' in col.lower()][0]
+            judul_col = [col for col in df_git_detail.columns if 'judul' in col.lower()][0]
+            link_col = [col for col in df_git_detail.columns if 'link' in col.lower()][0]
+            
+            for _, row_detail in df_git_detail.iterrows():
+                kab_val = standardisasi_nama(row_detail[kab_col_det])
+                judul_val = str(row_detail[judul_col]).strip()
+                link_val = str(row_detail[link_col]).strip()
+                
+                # Filter topik DBD / Demam Berdarah
+                if any(kw in judul_val.lower() for kw in ['dbd', 'demam berdarah', 'fogging', 'aedes']):
+                    if kab_val not in peta_detail_berita:
+                        peta_detail_berita[kab_val] = []
+                    peta_detail_berita[kab_val].append({
+                        'judul': judul_val,
+                        'link': link_val
+                    })
+        except Exception as e:
+            errors.append(f"Gagal memproses detail berita: {e}")
 
     peta_cuaca = {}
     df_git_cuaca = None
@@ -383,6 +448,7 @@ def run_model(fogging_overrides=None):
             'p_aman': round(p_aman * 100, 1),
             'p_waspada': round(p_waspada * 100, 1),
             'p_siaga': round(p_siaga * 100, 1),
+            'detail_berita': peta_detail_berita.get(row['kab_key'], [])
         })
 
     return laporan_final

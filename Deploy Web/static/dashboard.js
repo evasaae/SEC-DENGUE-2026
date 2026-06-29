@@ -112,14 +112,33 @@ async function updateMapLayer() {
           const data = allData.find(d => d.kabupaten.replace(/KOTA /g, '') === kabName.replace(/KOTA /g, ''));
           
           if(data) {
+            let beritaHTML = "";
+            if (data.detail_berita && data.detail_berita.length > 0) {
+              beritaHTML = '<div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 5px;">';
+              beritaHTML += '<b style="font-size: 11px; color: #555;">Berita DBD Terkini:</b>';
+              data.detail_berita.slice(0, 3).forEach(news => {
+                const ringkasJudul = news.judul.length > 40 ? news.judul.substring(0, 40) + '...' : news.judul;
+                beritaHTML += `
+                  <div style="font-size: 11px; margin-top: 4px; line-height: 1.3;">
+                    • <a href="${news.link}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: 500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${ringkasJudul}</a>
+                  </div>
+                `;
+              });
+              beritaHTML += '</div>';
+            } else {
+              beritaHTML = '<div style="margin-top: 6px; font-size: 11px; color: #777; font-style: italic;">Tidak ada berita DBD terkini.</div>';
+            }
+
             const popupContent = `
-              <div class="map-popup" style="color: black;">
-                <h4 style="margin:0; font-weight:bold">${data.kabupaten}</h4>
-                <div style="font-size: 12px; margin-top:5px;">
-                  Status: <b>${data.status}</b><br>
-                  Suhu: <b>${data.suhu}°C</b><br>
-                  Berita: <b>${data.berita}</b>
+              <div class="map-popup" style="color: #222; font-family: sans-serif; min-width: 180px;">
+                <h4 style="margin:0; font-weight:bold; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 3px; color: #111;">${data.kabupaten}</h4>
+                <div style="font-size: 12px; margin-top:6px; line-height: 1.4; color: #444;">
+                  Status: <b style="color: ${data.status.includes('AMAN') ? '#28a745' : (data.status.includes('SIAGA') ? '#dc3545' : '#ff9900')}">${data.status.split(' ')[0]}</b><br>
+                  Suhu: <b>${data.suhu}°C</b> | Lembap: <b>${data.kelembapan}%</b><br>
+                  Curah Hujan 7D: <b>${data.hujan_7d} mm</b><br>
+                  Jumlah Berita: <b>${data.berita}</b>
                 </div>
+                ${beritaHTML}
               </div>
             `;
             layer.bindPopup(popupContent);
@@ -130,7 +149,7 @@ async function updateMapLayer() {
       console.error("GeoJSON Error:", err);
     }
   } else {
-    // Refresh styles
+    // Refresh styles and popups
     geoLayer.setStyle(feature => {
       const kabName = getFeatureName(feature);
       const data = allData.find(d => d.kabupaten.replace(/KOTA /g, '') === kabName.replace(/KOTA /g, ''));
@@ -140,6 +159,44 @@ async function updateMapLayer() {
         fillColor: colors[getStatusClass(status)] || colors.AMAN,
         fillOpacity: 0.6
       };
+    });
+
+    // Rebind popups dengan data terbaru
+    geoLayer.eachLayer(layer => {
+      const kabName = getFeatureName(layer.feature);
+      const data = allData.find(d => d.kabupaten.replace(/KOTA /g, '') === kabName.replace(/KOTA /g, ''));
+      if (data) {
+        let beritaHTML = "";
+        if (data.detail_berita && data.detail_berita.length > 0) {
+          beritaHTML = '<div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 5px;">';
+          beritaHTML += '<b style="font-size: 11px; color: #555;">Berita DBD Terkini:</b>';
+          data.detail_berita.slice(0, 3).forEach(news => {
+            const ringkasJudul = news.judul.length > 40 ? news.judul.substring(0, 40) + '...' : news.judul;
+            beritaHTML += `
+              <div style="font-size: 11px; margin-top: 4px; line-height: 1.3;">
+                • <a href="${news.link}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: 500;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${ringkasJudul}</a>
+              </div>
+            `;
+          });
+          beritaHTML += '</div>';
+        } else {
+          beritaHTML = '<div style="margin-top: 6px; font-size: 11px; color: #777; font-style: italic;">Tidak ada berita DBD terkini.</div>';
+        }
+
+        const popupContent = `
+          <div class="map-popup" style="color: #222; font-family: sans-serif; min-width: 180px;">
+            <h4 style="margin:0; font-weight:bold; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 3px; color: #111;">${data.kabupaten}</h4>
+            <div style="font-size: 12px; margin-top:6px; line-height: 1.4; color: #444;">
+              Status: <b style="color: ${data.status.includes('AMAN') ? '#28a745' : (data.status.includes('SIAGA') ? '#dc3545' : '#ff9900')}">${data.status.split(' ')[0]}</b><br>
+              Suhu: <b>${data.suhu}°C</b> | Lembap: <b>${data.kelembapan}%</b><br>
+              Curah Hujan 7D: <b>${data.hujan_7d} mm</b><br>
+              Jumlah Berita: <b>${data.berita}</b>
+            </div>
+            ${beritaHTML}
+          </div>
+        `;
+        layer.bindPopup(popupContent);
+      }
     });
   }
 }
