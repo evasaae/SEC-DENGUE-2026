@@ -89,10 +89,10 @@
       <div class="map-header">
         <div class="map-title-badge">🗺️ Peta Risiko DBD — Kalbar</div>
         <div class="map-legend">
-          <div class="legend-item"><div class="legend-dot" style="background:#00e87a"></div> AMAN</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#ffd60a"></div> WASPADA</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#ff2d55"></div> SIAGA</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#ff8800"></div> Golden Window</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> AMAN</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> WASPADA</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> SIAGA</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> Golden Window</div>
         </div>
       </div>
       <div id="map"></div>
@@ -119,8 +119,6 @@
               <th>Status</th>
               <th>Suhu</th>
               <th>Berita</th>
-              <th>Analisis Proaktif</th>
-              <th>Drift Risk</th>
             </tr>
           </thead>
           <tbody id="table-body">
@@ -220,6 +218,8 @@
      TOAST CONTAINER
 ══════════════════════════════════════════════════════════ -->
 <div class="toast-container" id="toast-container"></div>
+
+<div class="floating-mosquito-bg">🦟</div>
 
 <!-- ══════════════════════════════════════════════════════════
      SCRIPTS
