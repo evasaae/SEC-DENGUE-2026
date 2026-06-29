@@ -20,8 +20,18 @@ jobs:
         with:
           python-version: '3.11'
       
+      - name: Cache HuggingFace Models
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ runner.os }}-huggingface-${{ hashFiles('web-scrapping/scrap.py') }}
+          restore-keys: |
+            ${{ runner.os }}-huggingface-
+      
       - name: Install dependencies
-        run: pip install feedparser pandas
+        run: |
+          pip install feedparser pandas transformers sentencepiece protobuf
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
       
       - name: Run scraper
         run: python web-scrapping/scrap.py

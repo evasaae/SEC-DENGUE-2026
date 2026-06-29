@@ -2,6 +2,16 @@ import feedparser
 from datetime import datetime, timedelta
 import pandas as pd
 import os
+import warnings
+from transformers import pipeline
+
+# Suppress warnings from huggingface
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+
+print("Memuat model NLP Zero-Shot Classification...")
+classifier = pipeline("zero-shot-classification", model="MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
+kategori_berita = ["laporan kasus infeksi atau wabah baru", "tips pencegahan", "informasi umum atau fakta"]
 
 kabupaten = [
     'Sambas', 'Bengkayang', 'Landak', 'Mempawah', 'Sanggau',
@@ -32,11 +42,21 @@ for kab in kabupaten:
         except:
             continue
 
-        if str(tanggal) in harian[kab]:
-            harian[kab][str(tanggal)] += 1
+        if tanggal not in window:
+            continue
 
-        if tanggal in window:
-            detail_berita.append({
+        # Klasifikasikan judul berita (hanya jika tanggal masuk dalam window)
+        hasil = classifier(berita.title, kategori_berita, multi_label=False)
+        kategori_teratas = hasil['labels'][0]
+
+        # Hanya hitung jika berita terkait laporan kasus atau wabah baru
+        if kategori_teratas != "laporan kasus infeksi atau wabah baru":
+            print(f"  [SKIPPED] {berita.title} (Kategori: {kategori_teratas})")
+            continue
+
+        harian[kab][str(tanggal)] += 1
+
+        detail_berita.append({
                 'kabupaten': kab,
                 'tanggal': str(tanggal),
                 'hari': nama_hari[tanggal.weekday()],
