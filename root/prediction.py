@@ -139,18 +139,45 @@ if df_git_detail is not None:
 print("\n[2/5] Membaca data cuaca harian Kalbar...")
 df_git_cuaca = None
 
+df_local = None
+if os.path.exists(LOCAL_CUACA_PATH):
+    try:
+        df_local = pd.read_csv(LOCAL_CUACA_PATH)
+    except Exception as e:
+        print(f"      [!] Gagal membaca cuaca lokal: {e}")
+
+df_url = None
 try:
     print(f"      -> Mengunduh data cuaca dari GitHub Actions...")
-    df_git_cuaca = pd.read_csv(URL_CUACA)
+    df_url = pd.read_csv(URL_CUACA, timeout=5)
     print(f"      -> Sukses mengunduh dari: {URL_CUACA}")
 except Exception as e:
-    print(f"      [!] Gagal mengunduh: {e}. Mencoba berkas lokal...")
-    if os.path.exists(LOCAL_CUACA_PATH):
-        try:
-            df_git_cuaca = pd.read_csv(LOCAL_CUACA_PATH)
-            print(f"      -> Sukses membaca data cuaca lokal: '{LOCAL_CUACA_PATH}'")
-        except Exception as ex:
-            print(f"      [!] Gagal membaca data cuaca lokal: {ex}")
+    print(f"      [!] Gagal mengunduh: {e}")
+
+# Bandingkan tanggal terbaru dari kedua sumber untuk menghindari data usang (stale data)
+if df_local is not None and df_url is not None:
+    try:
+        # Deteksi nama kolom tanggal
+        tanggal_cols = [c for c in df_local.columns if 'tanggal' in c.lower() or 'waktu' in c.lower()]
+        tanggal_col_test = tanggal_cols[0] if len(tanggal_cols) > 0 else df_local.columns[0]
+        
+        local_max = pd.to_datetime(df_local[tanggal_col_test]).max()
+        url_max = pd.to_datetime(df_url[tanggal_col_test]).max()
+        if local_max >= url_max:
+            df_git_cuaca = df_local
+            print(f"      -> Menggunakan data cuaca lokal karena lebih baru/setara (terbaru: {local_max.strftime('%Y-%m-%d')})")
+        else:
+            df_git_cuaca = df_url
+            print(f"      -> Menggunakan data cuaca online karena lebih baru (terbaru: {url_max.strftime('%Y-%m-%d')})")
+    except Exception as e:
+        print(f"      [!] Gagal membandingkan tanggal cuaca: {e}")
+        df_git_cuaca = df_local if df_local is not None else df_url
+elif df_local is not None:
+    df_git_cuaca = df_local
+    print("      -> Menggunakan data cuaca lokal (data online gagal diunduh).")
+elif df_url is not None:
+    df_git_cuaca = df_url
+    print("      -> Menggunakan data cuaca online (data lokal tidak ditemukan).")
 
 if df_git_cuaca is None:
     raise ValueError("Tidak dapat memuat data cuaca harian baik dari GitHub maupun berkas lokal.")
