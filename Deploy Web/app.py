@@ -158,9 +158,9 @@ def api_summary():
         if isinstance(data, dict) and 'error' in data:
             return jsonify(data), 500
 
-        n_aman    = sum(1 for d in data if d['status'] == 'AMAN')
-        n_waspada = sum(1 for d in data if d['status'] == 'WASPADA')
-        n_siaga   = sum(1 for d in data if d['status'] == 'SIAGA')
+        n_aman    = sum(1 for d in data if 'AMAN' in d['status'].upper())
+        n_waspada = sum(1 for d in data if 'WASPADA' in d['status'].upper())
+        n_siaga   = sum(1 for d in data if 'SIAGA' in d['status'].upper())
         n_golden  = sum(1 for d in data if d.get('golden_window', False))
         n_fogging = sum(1 for d in data if d.get('fogging_active', False))
 

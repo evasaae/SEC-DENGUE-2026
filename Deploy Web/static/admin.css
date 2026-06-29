@@ -5,25 +5,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --bg-base: #060b18;
-  --bg-surface: #0d1526;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --border: rgba(255, 255, 255, 0.08);
-  --text-primary: #f0f4ff;
-  --text-secondary: #8892a4;
-  --text-muted: #4a5568;
-  --cyan: #06b6d4;
-  --red: #ff2d55;
-  --yellow: #ffd60a;
-  --green: #00e87a;
-  --orange: #ff8800;
+  --bg-base: #fcf8f8;
+  --bg-surface: #ffffff;
+  --bg-card: rgba(225, 29, 72, 0.03);
+  --border: rgba(225, 29, 72, 0.08);
+  --text-primary: #1e1213;
+  --text-secondary: #5c4b4d;
+  --text-muted: #9c8487;
+  --cyan: #e11d48;
+  --red: #e11d48;
+  --yellow: #d97706;
+  --green: #10b981;
+  --orange: #ea580c;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Outfit', 'Inter', sans-serif;
-  background: var(--bg-base);
+  background: linear-gradient(135deg, #ffeef0 0%, #f7f3f4 50%, #e2e8f0 100%);
   color: var(--text-primary);
+  min-height: 100vh;
 }
 
 /* ── STATUS BADGES ── */
@@ -90,16 +91,18 @@ body {
 #admin-app { display: none; min-height: 100vh; flex-direction: column; }
 .admin-topbar {
   display: flex; align-items: center; padding: 16px 24px;
-  background: var(--bg-surface); border-bottom: 1px solid var(--border); gap: 16px;
+  background: linear-gradient(90deg, #9f1239 0%, #be123c 50%, #e11d48 100%);
+  border-bottom: 2px solid #881337; gap: 16px;
+  box-shadow: 0 4px 15px rgba(225, 29, 72, 0.15);
 }
-.admin-topbar-brand { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
-.admin-badge { background: rgba(6,182,212,0.1); color: var(--cyan); padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; border: 1px solid rgba(6,182,212,0.3); }
+.admin-topbar-brand { font-weight: 700; font-size: 1.15rem; display: flex; align-items: center; gap: 10px; color: #ffffff; }
+.admin-badge { background: rgba(255, 255, 255, 0.15); color: #ffffff; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; border: 1px solid rgba(255, 255, 255, 0.25); }
 .admin-spacer { flex: 1; }
 .btn-back, .admin-logout {
-  background: var(--bg-card); border: 1px solid var(--border);
-  color: var(--text-primary); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: background 0.2s;
 }
-.btn-back:hover, .admin-logout:hover { background: rgba(255,255,255,0.1); }
+.btn-back:hover, .admin-logout:hover { background: rgba(255, 255, 255, 0.25); }
 
 .admin-content { padding: 24px; max-width: 1200px; margin: 0 auto; width: 100%; flex: 1; }
 .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
@@ -158,3 +161,19 @@ body {
 .toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
 .toast { background: var(--bg-surface); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
 .toast.success { border-left: 4px solid var(--cyan); }
+
+.floating-mosquito-bg {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  font-size: 3.8rem;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 10;
+  animation: float-mosquito 6s ease-in-out infinite;
+}
+@keyframes float-mosquito {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate(-15px, -20px) scale(1.15) rotate(15deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+}

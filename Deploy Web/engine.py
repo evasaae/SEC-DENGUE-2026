@@ -1,7 +1,7 @@
 r"""
 EWS DBD Kalbar — Engine ML
-Port dari StrategiC_Alert3.py untuk digunakan sebagai modul Flask API.
-Sumber data Excel: D:\SATRIA DATA\SEC-DENGUE-2026\
+Port dari prediction.py & StrategiC_Alert3.py untuk digunakan sebagai modul Flask API.
+Menggunakan model latih riil dari dataset_tahunan.xlsx (6 fitur) dan data BMKG/Google News.
 Output: list of dicts (JSON-serializable)
 """
 
@@ -10,12 +10,30 @@ import os
 import numpy as np
 import re
 from sklearn.naive_bayes import GaussianNB
-from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.model_selection import GridSearchCV
 
 # ==================================================================
-# CONFIG PATH — Sumber dari SEC-DENGUE-2026
+# CONFIG PATH — Dinamis menyesuaikan letak folder
 # ==================================================================
-JALUR_EXCEL = r"C:\Users\user\SIGAP-DBD\Deploy Web\SEC13 SATRIA DATA 2026 REMINDER.xlsx"
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+
+# Cek di folder dataset lokal Deploy Web dulu, lalu folder root Deploy Web, baru parent
+if os.path.exists(os.path.join(CURRENT_DIR, "dataset", "SEC13 SATRIA DATA 2026 REMINDER.xlsx")):
+    JALUR_EXCEL = os.path.join(CURRENT_DIR, "dataset", "SEC13 SATRIA DATA 2026 REMINDER.xlsx")
+elif os.path.exists(os.path.join(CURRENT_DIR, "SEC13 SATRIA DATA 2026 REMINDER.xlsx")):
+    JALUR_EXCEL = os.path.join(CURRENT_DIR, "SEC13 SATRIA DATA 2026 REMINDER.xlsx")
+else:
+    JALUR_EXCEL = os.path.join(PARENT_DIR, "SEC13 SATRIA DATA 2026 REMINDER.xlsx")
+
+if os.path.exists(os.path.join(CURRENT_DIR, "dataset", "dataset_tahunan.xlsx")):
+    DATASET_TRAINING = os.path.join(CURRENT_DIR, "dataset", "dataset_tahunan.xlsx")
+elif os.path.exists(os.path.join(CURRENT_DIR, "dataset_tahunan.xlsx")):
+    DATASET_TRAINING = os.path.join(CURRENT_DIR, "dataset_tahunan.xlsx")
+else:
+    DATASET_TRAINING = os.path.join(PARENT_DIR, "dataset_tahunan.xlsx")
 URL_BERITA  = "https://raw.githubusercontent.com/evasaae/SEC-DENGUE-2026/main/data/berita_dbd.csv"
 URL_CUACA   = "https://raw.githubusercontent.com/evasaae/SEC-DENGUE-2026/main/Data%20Cuaca%20Harian%20Kalbar/Data_Cuaca_Harian_Kalbar_Hari_Ini.csv"
 
@@ -35,6 +53,19 @@ def standardisasi_nama(teks):
     t = " ".join(t.split())
     return t
 
+def hitung_hari_kritis_berturut_turut(series_hujan, threshold=10):
+    is_heavy = (series_hujan > threshold).astype(int).values
+    max_consecutive = 0
+    current_consecutive = 0
+    for val in is_heavy:
+        if val == 1:
+            current_consecutive += 1
+            if current_consecutive > max_consecutive:
+                max_consecutive = current_consecutive
+        else:
+            current_consecutive = 0
+    return max_consecutive
+
 # ==================================================================
 # MAIN MODEL RUNNER
 # ==================================================================
@@ -51,72 +82,119 @@ def run_model(fogging_overrides=None):
     errors = []
 
     # ------------------------------------------------------------------
-    # TAHAP 1: STREAMING DATA EKSTERNAL (GIT SOURCES)
+    # TAHAP 1: STREAMING DATA EKSTERNAL (GIT SOURCES / LOKAL)
     # ------------------------------------------------------------------
     peta_berita = {}
+    df_git_berita = None
     try:
         df_git_berita = pd.read_csv(URL_BERITA)
-        df_git_berita.columns = [re.sub(r'[^\x00-\x7F]+', ' ', col).strip() for col in df_git_berita.columns]
-        kab_col = [col for col in df_git_berita.columns if 'kabupaten' in col.lower() or 'wilayah' in col.lower()][0]
-        total_col = [col for col in df_git_berita.columns if 'total 7' in col.lower() or 'total' in col.lower()][0]
-        df_git_berita['Key'] = df_git_berita[kab_col].apply(standardisasi_nama)
-        peta_berita = dict(zip(df_git_berita['Key'], df_git_berita[total_col]))
     except Exception as e:
-        errors.append(f"Berita Git error: {e}")
+        errors.append(f"Gagal mengunduh berita dari URL: {e}")
+        local_berita = os.path.join(PARENT_DIR, "data", "berita_dbd.csv")
+        if os.path.exists(local_berita):
+            try:
+                df_git_berita = pd.read_csv(local_berita)
+            except Exception as ex:
+                errors.append(f"Gagal membaca berita lokal: {ex}")
+
+    if df_git_berita is not None:
+        try:
+            df_git_berita.columns = [re.sub(r'[^\x00-\x7F]+', ' ', col).strip() for col in df_git_berita.columns]
+            kab_col = [col for col in df_git_berita.columns if 'kabupaten' in col.lower() or 'wilayah' in col.lower()][0]
+            total_col = [col for col in df_git_berita.columns if 'total 7' in col.lower() or 'total' in col.lower()][0]
+            df_git_berita['Key'] = df_git_berita[kab_col].apply(standardisasi_nama)
+            peta_berita = dict(zip(df_git_berita['Key'], df_git_berita[total_col]))
+        except Exception as e:
+            errors.append(f"Parse berita error: {e}")
 
     peta_cuaca = {}
+    df_git_cuaca = None
+    
+    # 1. Coba baca dari file lokal terlebih dahulu untuk mengecek versi terbaru
+    local_cuaca = os.path.join(PARENT_DIR, "Data Cuaca Harian Kalbar", "Data_Cuaca_Harian_Kalbar_Hari_Ini.csv")
+    df_local = None
+    if os.path.exists(local_cuaca):
+        try:
+            df_local = pd.read_csv(local_cuaca)
+        except Exception as e:
+            errors.append(f"Gagal membaca cuaca lokal: {e}")
+
+    # 2. Coba unduh dari URL dengan timeout agar tidak menggantung
+    df_url = None
     try:
-        df_git_cuaca = pd.read_csv(URL_CUACA)
-        df_git_cuaca.columns = [re.sub(r'[^\x00-\x7F]+', ' ', col).strip() for col in df_git_cuaca.columns]
-        kab_col = [col for col in df_git_cuaca.columns if 'kabupaten' in col.lower() or 'wilayah' in col.lower()][0]
-        suhu_col = [col for col in df_git_cuaca.columns if 'suhu' in col.lower()][0]
-        kelembapan_col = [col for col in df_git_cuaca.columns if 'kelembapan' in col.lower()][0]
-        hujan_col = [col for col in df_git_cuaca.columns if 'hujan 7' in col.lower() or 'hujan_7' in col.lower() or 'jam hujan 7' in col.lower()][0]
-        
-        # default fallback jika kolom tanggal tidak ditemukan
-        tanggal_cols = [col for col in df_git_cuaca.columns if 'tanggal' in col.lower() or 'waktu' in col.lower()]
-        tanggal_col = tanggal_cols[0] if len(tanggal_cols) > 0 else df_git_cuaca.columns[0]
-        
-        df_git_cuaca['Key'] = df_git_cuaca[kab_col].apply(standardisasi_nama)
-        
-        # Urutkan berdasarkan Key dan Tanggal menaik untuk rolling window kronologis
-        df_git_cuaca = df_git_cuaca.sort_values(by=['Key', tanggal_col], ascending=True)
-        
-        # default fallback jika kolom jam hujan harian tidak ditemukan
-        jam_hujan_harian_cols = [col for col in df_git_cuaca.columns if 'jam hujan' in col.lower() and '7' not in col.lower()]
-        if len(jam_hujan_harian_cols) > 0:
-            jam_hujan_harian_col = jam_hujan_harian_cols[0]
-            df_git_cuaca['Hujan_Lebat_Harian'] = (df_git_cuaca[jam_hujan_harian_col] > 5).astype(int)
-        else:
-            df_git_cuaca['Hujan_Lebat_Harian'] = (df_git_cuaca[hujan_col] / 7.0 > 5.0 / 7.0).astype(int)
-
-        # Hitung Hujan_Kritis_3D (rolling sum 3 hari >= 3)
-        df_git_cuaca['Hujan_Kritis_3D'] = df_git_cuaca.groupby('Key')['Hujan_Lebat_Harian'].transform(
-            lambda x: (x.rolling(window=3, min_periods=1).sum() >= 3).astype(int)
-        )
-        
-        # Ambil baris terakhir (terbaru) untuk masing-masing wilayah
-        df_git_cuaca_latest = df_git_cuaca.drop_duplicates(subset=['Key'], keep='last')
-        
-        for _, baris in df_git_cuaca_latest.iterrows():
-            kab_key = baris['Key']
-            suhu = float(baris[suhu_col])
-            kelembapan = float(baris[kelembapan_col])
-            total_jam_hujan = float(baris[hujan_col])
-            hujan_kritis = int(baris['Hujan_Kritis_3D'])
-            peta_cuaca[kab_key] = {
-                'Suhu': suhu,
-                'Kelembapan': kelembapan,
-                'THI': hitung_thi(suhu, kelembapan),
-                'Total_Jam_Hujan': total_jam_hujan,
-                'Hujan_Kritis_3D': hujan_kritis
-            }
+        df_url = pd.read_csv(URL_CUACA, timeout=5)
     except Exception as e:
-        errors.append(f"Cuaca Git error: {e}")
+        errors.append(f"Gagal mengunduh cuaca dari URL: {e}")
+
+    # 3. Bandingkan tanggal terbaru dari kedua sumber untuk menghindari data usang (stale data)
+    tanggal_col_test = None
+    if df_local is not None and not df_local.empty:
+        tanggal_cols = [c for c in df_local.columns if 'tanggal' in c.lower() or 'waktu' in c.lower()]
+        tanggal_col_test = tanggal_cols[0] if len(tanggal_cols) > 0 else df_local.columns[0]
+        
+    if df_local is not None and df_url is not None:
+        try:
+            local_max = pd.to_datetime(df_local[tanggal_col_test]).max()
+            url_max = pd.to_datetime(df_url[tanggal_col_test]).max()
+            if local_max >= url_max:
+                df_git_cuaca = df_local
+            else:
+                df_git_cuaca = df_url
+        except Exception as e:
+            errors.append(f"Gagal membandingkan tanggal cuaca: {e}")
+            df_git_cuaca = df_local if df_local is not None else df_url
+    elif df_local is not None:
+        df_git_cuaca = df_local
+    elif df_url is not None:
+        df_git_cuaca = df_url
+
+    if df_git_cuaca is not None:
+        try:
+            df_git_cuaca.columns = [re.sub(r'[^\x00-\x7F]+', ' ', col).strip() for col in df_git_cuaca.columns]
+            kab_col = [col for col in df_git_cuaca.columns if 'kabupaten' in col.lower() or 'wilayah' in col.lower()][0]
+            suhu_col = [col for col in df_git_cuaca.columns if 'suhu' in col.lower()][0]
+            kelembapan_col = [col for col in df_git_cuaca.columns if 'kelembapan' in col.lower()][0]
+            hujan_col = [col for col in df_git_cuaca.columns if 'hujan' in col.lower() or 'hujan (mm)' in col.lower()][0]
+            
+            tanggal_cols = [col for col in df_git_cuaca.columns if 'tanggal' in col.lower() or 'waktu' in col.lower()]
+            tanggal_col = tanggal_cols[0] if len(tanggal_cols) > 0 else df_git_cuaca.columns[0]
+            
+            df_git_cuaca['Key'] = df_git_cuaca[kab_col].apply(standardisasi_nama)
+            df_git_cuaca = df_git_cuaca.sort_values(by=['Key', tanggal_col], ascending=True)
+
+            df_git_cuaca[tanggal_col] = pd.to_datetime(df_git_cuaca[tanggal_col])
+            latest_date = df_git_cuaca[tanggal_col].max()
+            
+            df_cuaca_latest = df_git_cuaca[df_git_cuaca[tanggal_col] == latest_date]
+            df_cuaca_7d = df_git_cuaca[df_git_cuaca[tanggal_col] >= latest_date - pd.Timedelta(days=6)]
+
+            for kab, group in df_cuaca_7d.groupby('Key'):
+                baris_terbaru = df_cuaca_latest[df_cuaca_latest['Key'] == kab]
+                if len(baris_terbaru) > 0:
+                    suhu_hari_ini = float(baris_terbaru[suhu_col].values[0])
+                    kelembapan_hari_ini = float(baris_terbaru[kelembapan_col].values[0])
+                else:
+                    suhu_hari_ini = float(group[suhu_col].mean())
+                    kelembapan_hari_ini = float(group[kelembapan_col].mean())
+                
+                total_hujan_7d = float(group[hujan_col].sum())
+                hujan_kritis_berturut_7d = hitung_hari_kritis_berturut_turut(group[hujan_col], threshold=10)
+                
+                peta_cuaca[kab] = {
+                    'Suhu': round(suhu_hari_ini, 2),
+                    'Kelembapan': round(kelembapan_hari_ini, 2),
+                    'THI': hitung_thi(suhu_hari_ini, kelembapan_hari_ini),
+                    'Hujan_7D': round(total_hujan_7d, 2),
+                    'Hujan_Kritis_Berturut_7D': hujan_kritis_berturut_7d
+                }
+        except Exception as e:
+            errors.append(f"Cuaca Git parse error: {e}")
 
     # ------------------------------------------------------------------
-    # TAHAP 2: DATA EKSTERNAL KASUS
+    # TAHAP 2: DATA EKSTERNAL KASUS HISTORIS (UNTUK TAMPILAN)
     # ------------------------------------------------------------------
+    peta_kasus_terakhir = {}
+    rata_rata_regional = 120
     try:
         df_kasus = pd.read_excel(JALUR_EXCEL, sheet_name='test 2')
         df_kasus['Key'] = df_kasus['Wilayah'].apply(standardisasi_nama)
@@ -134,71 +212,42 @@ def run_model(fogging_overrides=None):
         peta_kasus_terakhir = dict(zip(df_tahun_akhir['Key'], df_tahun_akhir[kolom_terjangkit]))
         rata_rata_regional = int(df_tahun_akhir[kolom_terjangkit].mean()) if len(df_tahun_akhir) > 0 else 120
     except Exception as e:
-        return {"error": f"Gagal membaca data kasus Excel: {e}"}
+        errors.append(f"Gagal membaca data kasus Excel: {e}")
 
     # ------------------------------------------------------------------
-    # TAHAP 3: TRAINING TUNED NAIVE BAYES MODEL
+    # TAHAP 3: TRAINING RIIL MODEL DARI DATASET TAHUNAN
     # ------------------------------------------------------------------
     try:
-        np.random.seed(42)
-        n_samples = 300
-
-        hist_kepadatan = np.random.uniform(10, 200, n_samples)
-        hist_kasus_lalu = np.random.randint(50, 1600, n_samples)
-        hist_thi = np.random.uniform(72, 83, n_samples)
-        hist_total_hujan = np.random.uniform(0, 80, n_samples)
-        hist_hujan_kritis = np.random.choice([0, 1], size=n_samples, p=[0.6, 0.4])
-
-        X_historical = np.column_stack((hist_kepadatan, hist_kasus_lalu, hist_thi, hist_total_hujan, hist_hujan_kritis))
-
-        y_historical = []
-        for i in range(n_samples):
-            if X_historical[i, 2] > 78.5 and X_historical[i, 4] == 1:
-                status = 2  # SIAGA
-            elif X_historical[i, 1] > 600 or X_historical[i, 3] > 40:
-                status = 1  # WASPADA
-            else:
-                status = 0  # AMAN
-                
-            # Noise 10%
-            if np.random.rand() < 0.10:
-                status = np.random.choice([0, 1, 2])
-            y_historical.append(status)
-        y_historical = np.array(y_historical)
-
-        # DataFrame untuk outlier removal
-        df_hist = pd.DataFrame(X_historical, columns=['Kepadatan', 'Kasus', 'THI', 'Hujan', 'Hujan_Kritis'])
-        df_hist['Target'] = y_historical
-
-        # Outlier removal
-        for col in ['Kasus', 'Hujan']:
-            Q1 = df_hist[col].quantile(0.25)
-            Q3 = df_hist[col].quantile(0.75)
-            IQR = Q3 - Q1
-            df_hist = df_hist[~((df_hist[col] < (Q1 - 1.5 * IQR)) | (df_hist[col] > (Q3 + 1.5 * IQR)))]
-
-        X_clean = df_hist.drop(columns=['Target']).values
-        y_clean = df_hist['Target'].values
-
-        # Split & Fit Scaler
-        from sklearn.model_selection import train_test_split, GridSearchCV
-        from sklearn.preprocessing import StandardScaler
+        df_train = pd.read_excel(DATASET_TRAINING)
         
-        X_train, X_test, y_train, y_test = train_test_split(
-            X_clean, y_clean, test_size=0.2, random_state=42, stratify=y_clean
-        )
-
+        # Ekstrak data kepadatan tahun terbaru (2023) langsung dari dataset tahunan
+        df_2023 = df_train[df_train['Tahun'] == 2023]
+        peta_kepadatan = {}
+        for _, r in df_2023.iterrows():
+            key = standardisasi_nama(r['Wilayah'])
+            peta_kepadatan[key] = float(r['Kepadatan'])
+            
+        fitur_kolom = ['Kepadatan', 'Suhu', 'Kelembapan', 'THI', 'Total_Hujan', 'Hujan_Kritis']
+        X_train = df_train[fitur_kolom]
+        min_bounds = X_train.min()
+        max_bounds = X_train.max()
+        
         scaler = StandardScaler()
         X_train_scaled = scaler.fit_transform(X_train)
-
-        # Tuning GridSearchCV
+        
+        kmeans_model = KMeans(n_clusters=3, random_state=42, n_init=10)
+        y_train = kmeans_model.fit_predict(X_train_scaled)
+        
         base_nb = GaussianNB()
         param_grid = {'var_smoothing': np.logspace(0, -9, num=100)}
         grid_search = GridSearchCV(base_nb, param_grid, cv=5, scoring='accuracy')
         grid_search.fit(X_train_scaled, y_train)
-
+        
         model_nb_tuned = grid_search.best_estimator_
-        mapping_kelas = {0: 'AMAN', 1: 'WASPADA', 2: 'SIAGA'}
+        
+        # Mapping kelas baru (sesuai prediction.py)
+        # Cluster 0 = WASPADA, Cluster 1 = SIAGA, Cluster 2 = AMAN
+        mapping_kelas = {0: 'WASPADA', 1: 'SIAGA', 2: 'AMAN'}
     except Exception as e:
         return {"error": f"Gagal training model: {e}"}
 
@@ -216,15 +265,17 @@ def run_model(fogging_overrides=None):
         kab_key    = standardisasi_nama(raw_nama)
         penduduk   = baris['Penduduk_Terbaru']
         luas       = baris['Luas_Wilayah']
-        kepadatan  = penduduk / luas
+        
+        # Prioritas kepadatan dari 2023 dataset_tahunan, fallback ke hitungan Master_Wilayah
+        kepadatan = peta_kepadatan.get(kab_key, penduduk / luas)
         total_berita = int(peta_berita.get(kab_key, 0))
 
         cuaca = peta_cuaca.get(kab_key, {
             'Suhu': 27.2, 
             'Kelembapan': 82.0, 
             'THI': 78.4, 
-            'Total_Jam_Hujan': 3.0,
-            'Hujan_Kritis_3D': 0
+            'Hujan_7D': 65.0,
+            'Hujan_Kritis_Berturut_7D': 1
         })
 
         koleksi_fitur_live.append({
@@ -234,8 +285,8 @@ def run_model(fogging_overrides=None):
             'suhu': cuaca['Suhu'],
             'kelembapan': cuaca['Kelembapan'],
             'thi': cuaca['THI'],
-            'hujan_7d': cuaca['Total_Jam_Hujan'],
-            'hujan_kritis_3d': cuaca['Hujan_Kritis_3D'],
+            'hujan_7d': cuaca['Hujan_7D'],
+            'hujan_kritis_7d': cuaca['Hujan_Kritis_Berturut_7D'],
             'berita': total_berita,
             'kasus_lalu': peta_kasus_terakhir.get(kab_key, rata_rata_regional),
             'fogging_active': fogging_overrides.get(raw_nama, False)
@@ -243,18 +294,28 @@ def run_model(fogging_overrides=None):
 
     df_inferensi = pd.DataFrame(koleksi_fitur_live)
     
-    # Kepadatan scaled untuk log-drift di AMAN (range 8.0 s/d 58.0)
+    # Kepadatan scaled untuk log-drift (range 8.0 s/d 58.0)
     scaler_kepadatan = MinMaxScaler(feature_range=(8.0, 58.0))
     df_inferensi['kepadatan_scaled'] = scaler_kepadatan.fit_transform(np.log1p(df_inferensi[['kepadatan']]))
 
     laporan_final = []
     for _, row in df_inferensi.iterrows():
-        kasus_live = row['kasus_lalu'] if row['kasus_lalu'] != 10 else rata_rata_regional
+        kasus_live = row['kasus_lalu']
 
         kepadatan_inj = row['kepadatan']
+        suhu_inj = row['suhu']
+        kelembapan_inj = row['kelembapan']
         thi_inj = row['thi']
-        hujan_inj = row['hujan_7d']
-        hujan_kritis_inj = row['hujan_kritis_3d']
+        hujan_7d = row['hujan_7d']
+        hujan_kritis_7d = row['hujan_kritis_7d']
+
+        # Proyeksi data cuaca harian ke skala tahunan untuk model
+        total_hujan_tahunan = round(hujan_7d * 52.18, 2)
+        hujan_kritis_tahunan = round(hujan_kritis_7d * 52.18, 2)
+
+        # Batasi agar tidak melompat keluar dari batas distribusi data training (out-of-distribution)
+        total_hujan_tahunan = float(np.clip(total_hujan_tahunan, min_bounds['Total_Hujan'], max_bounds['Total_Hujan']))
+        hujan_kritis_tahunan = float(np.clip(hujan_kritis_tahunan, min_bounds['Hujan_Kritis'], max_bounds['Hujan_Kritis']))
 
         # Jika fogging aktif, override output status dan drift risk sesuai user request
         if row['fogging_active']:
@@ -262,49 +323,45 @@ def run_model(fogging_overrides=None):
             persen_drift = 15.0
             analisis_proaktif = '[PENANGANAN] Fogging Dijalankan'
             keyakinan_sistem = 100.0  # Keyakinan sistem untuk intervensi
-            p_aman = 0.85             # Karena 85% risk reduced
-            p_waspada = 0.10
-            p_siaga = 0.05
+            p_aman = 85.0             # Karena 85% risk reduced
+            p_waspada = 10.0
+            p_siaga = 5.0
             golden_window = False
         else:
             # Lakukan prediksi model
-            data_uji = [[kepadatan_inj, kasus_live, thi_inj, hujan_inj, hujan_kritis_inj]]
+            data_uji = [[kepadatan_inj, suhu_inj, kelembapan_inj, thi_inj, total_hujan_tahunan, hujan_kritis_tahunan]]
             data_uji_scaled = scaler.transform(data_uji)
             peluang_array = model_nb_tuned.predict_proba(data_uji_scaled)[0]
 
-            p_aman = float(peluang_array[0])
-            p_waspada = float(peluang_array[1])
-            p_siaga = float(peluang_array[2])
+            # Urutan peluang sesuai cluster index: 0=WASPADA, 1=SIAGA, 2=AMAN
+            p_waspada = float(peluang_array[0])
+            p_siaga = float(peluang_array[1])
+            p_aman = float(peluang_array[2])
 
             prediksi_idx = int(np.argmax(peluang_array))
-            status_final = mapping_kelas[prediksi_idx]
             
-            efek_iklim = (row['thi'] - 74) * 2.0
-            persen_drift = 0.0
+            arti_status = {
+                0: "WASPADA (Endemisitas Sedang - Faktor Kelembapan)",
+                1: "SIAGA (Risiko Tinggi - Kerawanan Curah Hujan Ekstrem)",
+                2: "AMAN (Kondisi Stabil - Dampak Kepadatan Terkendali)"
+            }
+            status_final = arti_status[prediksi_idx]
+            keyakinan_sistem = round(peluang_array[prediksi_idx] * 100, 1)
 
-            if status_final == 'AMAN':
-                base_drift = (p_waspada / (p_aman + p_waspada)) * 100 if (p_aman + p_waspada) > 0 else 0
-                persen_ke_waspada = round(max(5.0, min(95.0, (row['kepadatan_scaled'] + efek_iklim) if base_drift < 0.001 else (base_drift + efek_iklim))), 1)
-                analisis_proaktif = f"[RAWAN] {persen_ke_waspada}% Menuju WASPADA"
-                keyakinan_sistem = round(100.0 - persen_ke_waspada, 1)
-                persen_drift = persen_ke_waspada
+            # Hitung kecenderungan naik ke tingkat risiko selanjutnya
+            if prediksi_idx == 2: # AMAN
+                p_naik = round(p_waspada * 100, 1) # Peluang ke WASPADA
+                persen_drift = p_naik
+                analisis_proaktif = "[RAWAN] Kepadatan penduduk terkendali"
                 golden_window = False
-
-            elif status_final == 'WASPADA':
-                base_drift = (p_siaga / (p_waspada + p_siaga)) * 100 if (p_waspada + p_siaga) > 0 else 0
-                persen_ke_siaga = round(max(5.0, min(95.0, (45.0 + efek_iklim + row['hujan_7d'] * 1.5) if base_drift < 0.001 else (base_drift + efek_iklim))), 1)
-                analisis_proaktif = f"[KRITIS] {persen_ke_siaga}% Menuju SIAGA"
-                keyakinan_sistem = round(100.0 - persen_ke_siaga, 1)
-                persen_drift = persen_ke_siaga
-                golden_window = persen_ke_siaga > 50  # GOLDEN WINDOW TRIGGER
-
-            elif status_final == 'SIAGA':
-                keyakinan_sistem = round(peluang_array[prediksi_idx] * 100, 1)
-                if keyakinan_sistem > 88 or row['thi'] > 78.4:
-                    analisis_proaktif = "[DARURAT] AKUT (KLB)"
-                else:
-                    analisis_proaktif = "[SIAGA] Monitor Ketat Wilayah"
+            elif prediksi_idx == 0: # WASPADA
+                p_naik = round(p_siaga * 100, 1) # Peluang ke SIAGA
+                persen_drift = p_naik
+                analisis_proaktif = "[KRITIS] Kelembapan udara memicu transmisi"
+                golden_window = p_naik > 50.0  # GOLDEN WINDOW TRIGGER
+            else: # SIAGA
                 persen_drift = 100.0
+                analisis_proaktif = "[DARURAT] Curah hujan ekstrem di wilayah"
                 golden_window = False
 
         laporan_final.append({
