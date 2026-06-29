@@ -16,6 +16,14 @@ import requests as http_requests
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
+# Nonaktifkan caching HTTP agar browser selalu memuat JS dan data terbaru
+@app.after_request
+def add_header(r):
+    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "0"
+    return r
+
 # ==================================================================
 # IN-MEMORY STATE (per session server)
 # ==================================================================
