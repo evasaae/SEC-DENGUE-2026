@@ -122,14 +122,12 @@ if df_git_detail is not None:
         df_git_detail.columns = [re.sub(r'[^\x00-\x7F]+', ' ', col).strip() for col in df_git_detail.columns]
         for _, row in df_git_detail.iterrows():
             judul = row.get('judul', row.get('Judul', 'Tanpa Judul'))
-            # Filter hanya berita yang benar-benar memuat topik DBD / Demam Berdarah
-            if any(kw in str(judul).lower() for kw in ['dbd', 'demam berdarah', 'fogging', 'aedes']):
-                list_berita.append({
-                    'Judul': judul,
-                    'Tanggal': row.get('tanggal', row.get('Tanggal', 'Unknown Date')),
-                    'Kabupaten': row.get('kabupaten', row.get('Kabupaten', 'Kalbar'))
-                })
-        print(f"      -> Sukses memfilter {len(list_berita)} detail berita DBD relevan untuk laporan.")
+            list_berita.append({
+                'Judul': judul,
+                'Tanggal': row.get('tanggal', row.get('Tanggal', 'Unknown Date')),
+                'Kabupaten': row.get('kabupaten', row.get('Kabupaten', 'Kalbar'))
+            })
+        print(f"      -> Sukses memuat {len(list_berita)} detail berita untuk laporan.")
     except Exception as e:
         print(f"      [!] Gagal parse detail berita: {e}")
 

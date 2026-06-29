@@ -161,14 +161,12 @@ def run_model(fogging_overrides=None):
                 judul_val = str(row_detail[judul_col]).strip()
                 link_val = str(row_detail[link_col]).strip()
                 
-                # Filter topik DBD / Demam Berdarah
-                if any(kw in judul_val.lower() for kw in ['dbd', 'demam berdarah', 'fogging', 'aedes']):
-                    if kab_val not in peta_detail_berita:
-                        peta_detail_berita[kab_val] = []
-                    peta_detail_berita[kab_val].append({
-                        'judul': judul_val,
-                        'link': link_val
-                    })
+                if kab_val not in peta_detail_berita:
+                    peta_detail_berita[kab_val] = []
+                peta_detail_berita[kab_val].append({
+                    'judul': judul_val,
+                    'link': link_val
+                })
         except Exception as e:
             errors.append(f"Gagal memproses detail berita: {e}")
 
