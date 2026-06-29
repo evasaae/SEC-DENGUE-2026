@@ -6,6 +6,7 @@ let map = null;
 let geoLayer = null;
 let allData = [];
 let autoRefreshId = null;
+let cityMarkers = [];
 
 // DOM Elements
 const clockEl = document.getElementById('clock');
@@ -21,10 +22,10 @@ const refreshBtn = document.getElementById('refresh-btn');
 
 // Colors
 const colors = {
-  AMAN: '#00e87a',
-  WASPADA: '#ffd60a',
-  SIAGA: '#ff2d55',
-  GOLDEN: '#ff8800'
+  AMAN: '#10b981',
+  WASPADA: '#f59e0b',
+  SIAGA: '#e11d48',
+  GOLDEN: '#f97316'
 };
 
 function getStatusClass(statusStr) {
@@ -52,7 +53,7 @@ async function initMap() {
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19
   }).addTo(map);
 
@@ -117,8 +118,7 @@ async function updateMapLayer() {
                 <div style="font-size: 12px; margin-top:5px;">
                   Status: <b>${data.status}</b><br>
                   Suhu: <b>${data.suhu}°C</b><br>
-                  Berita: <b>${data.berita}</b><br>
-                  Drift Risk: <b>${data.persen_drift}%</b>
+                  Berita: <b>${data.berita}</b>
                 </div>
               </div>
             `;
@@ -189,15 +189,6 @@ function renderTable(data) {
       <td><span class="badge badge-${statusClass}">${d.status}</span></td>
       <td>${d.suhu}°C</td>
       <td>${d.berita}</td>
-      <td style="font-size:0.8rem">${d.analisis_proaktif}</td>
-      <td>
-        <div class="progress-bar-container">
-          <div class="progress-bar-bg">
-            <div class="progress-bar bar-${statusClass}" style="width: ${d.persen_drift}%"></div>
-          </div>
-          <span class="progress-text">${d.persen_drift}%</span>
-        </div>
-      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -226,7 +217,6 @@ function checkGoldenWindow(data) {
       div.innerHTML = `
         <div class="golden-card-header">
           <span class="golden-card-title">${d.kabupaten}</span>
-          <span class="golden-card-badge">${d.persen_drift}% Drift</span>
         </div>
         <div class="golden-card-body">
           <div class="golden-card-metric"><span>Suhu:</span> <strong>${d.suhu}°C</strong></div>

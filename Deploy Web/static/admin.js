@@ -154,7 +154,7 @@ function renderFogging(data) {
   const activeOrSiaga = data.filter(d => d.status.toUpperCase().includes('SIAGA') || d.fogging_active);
   
   if (activeOrSiaga.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-secondary)">Tidak ada wilayah SIAGA atau intervensi aktif saat ini.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-secondary)">Tidak ada wilayah SIAGA atau intervensi aktif saat ini.</td></tr>`;
     return;
   }
   
@@ -179,7 +179,6 @@ function renderFogging(data) {
       <td><span class="badge badge-${statusClass}">${d.status}</span></td>
       <td>${d.suhu}°C</td>
       <td>${d.berita}</td>
-      <td>${d.analisis_proaktif}</td>
       <td>${undoBtn}</td>
       <td>${isFogging ? '<span style="color:var(--cyan); font-weight:bold;">Aktif</span>' : '-'}</td>
       <td>${actionBtn}</td>
