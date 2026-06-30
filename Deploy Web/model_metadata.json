@@ -1,0 +1,51 @@
+{
+    "feature_weights": [
+        1.0,
+        0.5,
+        0.25,
+        0.25
+    ],
+    "best_var_smoothing": 0.006579332246575682,
+    "metrics_80_20": {
+        "accuracy": 100.0,
+        "precision": 100.0,
+        "recall": 100.0,
+        "f1_score": 100.0
+    },
+    "metrics_5fold_cv": {
+        "accuracy": 93.05555555555556,
+        "precision": 90.55555555555556,
+        "recall": 93.05555555555556,
+        "f1_score": 91.2871572871573
+    },
+    "bounds": {
+        "min_bounds": {
+            "Kepadatan": 8.696199986596072,
+            "THI": 74.83,
+            "Total_Hujan": 2840.42,
+            "Hujan_Kritis": 59.0
+        },
+        "max_bounds": {
+            "Kepadatan": 5714.131169709263,
+            "THI": 80.03,
+            "Total_Hujan": 5271.77,
+            "Hujan_Kritis": 153.0
+        }
+    },
+    "peta_kepadatan": {
+        "BENGKAYANG": 54.06519281730074,
+        "KAPUAS HULU": 9.008779572414717,
+        "KAYONG UTARA": 28.31406268469833,
+        "KETAPANG": 18.29080663543118,
+        "PONTIANAK": 5714.131169709263,
+        "SINGKAWANG": 480.4484126984127,
+        "KUBU RAYA": 89.12135574902777,
+        "LANDAK": 41.06780635981067,
+        "MELAWI": 19.84080144350049,
+        "MEMPAWAH": 242.7848696060772,
+        "SAMBAS": 100.5996216207765,
+        "SANGGAU": 38.32489481011378,
+        "SEKADAU": 40.24539426556215,
+        "SINTANG": 20.1687543332563
+    }
+}
