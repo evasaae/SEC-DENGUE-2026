@@ -113,17 +113,10 @@ Buka **browser** (Chrome/Edge/Firefox) dan ketik salah satu URL berikut:
 ### 📊 Tabel Analisis Dinamis Proaktif
 - Menampilkan data **per wilayah** secara real-time
 - Kolom penting:
-  - **THI** (Temperature-Humidity Index)
-  - **Analisis Proaktif** — prediksi pergeseran status ke depan
-  - **Drift Risk** — persentase risiko eskalasi
+  - **Suhu** harian
+  - **Berita** harian
+  - **Status** risiko (Aman, Waspada, Siaga)
 
-### ⚡ Golden Window Trigger
-- **Sidebar kiri** yang muncul otomatis jika ada wilayah dengan drift ≥50%
-- Bisa dibuka/tutup dengan tombol ⚡ di kiri bawah layar
-- Berisi:
-  - Daftar wilayah kritis
-  - Tombol **Perintah Abatization**
-  - Tombol **Simulasi Broadcast Blast WA**
 
 ### 🏥 Panel Admin Dinkes
 - Akses: `http://localhost:5000/admin`

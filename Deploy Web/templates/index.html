@@ -66,13 +66,7 @@
         <div class="stat-label">Wilayah SIAGA</div>
       </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-icon purple">⚡</div>
-      <div class="stat-info">
-        <div class="stat-value purple" id="stat-golden">–</div>
-        <div class="stat-label">Golden Window Alert</div>
-      </div>
-    </div>
+
     <button class="refresh-btn" id="refresh-btn" onclick="loadData()">
       <span class="spin-icon">🔄</span>
       Refresh Data
@@ -92,7 +86,7 @@
           <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> AMAN</div>
           <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> WASPADA</div>
           <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> SIAGA</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> Golden Window</div>
+
         </div>
       </div>
       <div id="map"></div>
@@ -128,27 +122,7 @@
       </div>
     </div>
 
-    <!-- GOLDEN WINDOW SIDEBAR (toggle open/close) -->
-    <div class="golden-sidebar" id="golden-sidebar">
-  <div class="golden-header">
-    <div class="golden-icon">🔔</div>
-    <div class="golden-title">⚡ GOLDEN WINDOW WARNING</div>
-    <button class="golden-close" onclick="toggleGolden()">✕</button>
-  </div>
-  <div class="golden-body">
-    <div class="golden-warning-desc">
-      Wilayah berikut dalam fase <b>WASPADA</b> dengan laju pergeseran risiko <b>kritis (&ge;50% Menuju SIAGA)</b>. Diperlukan tindakan preemptif segera!
-    </div>
-    <div class="golden-area-list" id="golden-areas">
-      <!-- Dynamic list created by JS -->
-    </div>
-  </div>
-</div>
-<!-- Toggle tab (selalu tampil saat ada golden window) -->
-<button class="golden-tab" id="golden-tab" onclick="toggleGolden()">
-  <span class="golden-tab-icon">⚡</span>
-  <span class="golden-tab-count" id="golden-tab-count">0</span>
-</button>
+
 
 <!-- ══════════════════════════════════════════════════════════
      MODAL — ABATE

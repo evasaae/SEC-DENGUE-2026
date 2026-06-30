@@ -13,10 +13,6 @@ const clockEl = document.getElementById('clock');
 const liveStatusEl = document.getElementById('live-status');
 const tbody = document.getElementById('table-body');
 const searchInput = document.getElementById('search-input');
-const goldenSidebar = document.getElementById('golden-sidebar');
-const goldenAreasEl = document.getElementById('golden-areas');
-const goldenTab = document.getElementById('golden-tab');
-const goldenTabCount = document.getElementById('golden-tab-count');
 const loadingOverlay = document.getElementById('map-loading');
 const refreshBtn = document.getElementById('refresh-btn');
 
@@ -24,8 +20,7 @@ const refreshBtn = document.getElementById('refresh-btn');
 const colors = {
   AMAN: '#10b981',
   WASPADA: '#f59e0b',
-  SIAGA: '#e11d48',
-  GOLDEN: '#f97316'
+  SIAGA: '#e11d48'
 };
 
 function getStatusClass(statusStr) {
@@ -72,7 +67,6 @@ async function loadData() {
     
     updateStats(allData);
     renderTable(allData);
-    checkGoldenWindow(allData);
     
     await updateMapLayer();
     
@@ -214,19 +208,17 @@ function getFeatureName(feature) {
 }
 
 function updateStats(data) {
-  let aman = 0, waspada = 0, siaga = 0, golden = 0;
+  let aman = 0, waspada = 0, siaga = 0;
   data.forEach(d => {
     const sClass = getStatusClass(d.status);
     if(sClass === 'AMAN') aman++;
     else if(sClass === 'WASPADA') waspada++;
     else if(sClass === 'SIAGA') siaga++;
-    if(d.golden_window) golden++;
   });
   
   document.getElementById('stat-aman').textContent = aman;
   document.getElementById('stat-waspada').textContent = waspada;
   document.getElementById('stat-siaga').textContent = siaga;
-  document.getElementById('stat-golden').textContent = golden;
 }
 
 let selectedKabupaten = '';
@@ -237,8 +229,6 @@ function renderTable(data) {
   
   data.filter(d => d.kabupaten.toLowerCase().includes(term)).forEach(d => {
     const tr = document.createElement('tr');
-    if(d.golden_window) tr.classList.add('golden-row');
-    
     const statusClass = getStatusClass(d.status).toLowerCase();
     
     tr.innerHTML = `
@@ -253,51 +243,6 @@ function renderTable(data) {
 
 function filterTable() {
   renderTable(allData);
-}
-
-// Sidebar toggle
-function toggleGolden() {
-  goldenSidebar.classList.toggle('open');
-}
-
-function checkGoldenWindow(data) {
-  const golden = data.filter(d => d.golden_window);
-  
-  if(golden.length > 0) {
-    goldenTab.style.display = 'flex';
-    goldenTabCount.textContent = golden.length;
-    
-    goldenAreasEl.innerHTML = '';
-    golden.forEach(d => {
-      const div = document.createElement('div');
-      div.className = 'golden-card';
-      div.innerHTML = `
-        <div class="golden-card-header">
-          <span class="golden-card-title">${d.kabupaten}</span>
-        </div>
-        <div class="golden-card-body">
-          <div class="golden-card-metric"><span>Suhu:</span> <strong>${d.suhu}°C</strong></div>
-          <div class="golden-card-metric"><span>Berita:</span> <strong>${d.berita}</strong></div>
-        </div>
-        <div class="golden-card-actions">
-          <button class="btn-abate" onclick="event.stopPropagation(); openInterventionModal('abate', '${d.kabupaten}')">🧪 Abate</button>
-          <button class="btn-broadcast" onclick="event.stopPropagation(); openInterventionModal('broadcast', '${d.kabupaten}')">📲 Blast</button>
-        </div>
-      `;
-      div.addEventListener('click', () => {
-        focusKabupaten(d.kabupaten);
-      });
-      goldenAreasEl.appendChild(div);
-    });
-    
-    // Auto open if not explicitly closed
-    if(!goldenSidebar.classList.contains('closed-by-user')) {
-      goldenSidebar.classList.add('open');
-    }
-  } else {
-    goldenTab.style.display = 'none';
-    goldenSidebar.classList.remove('open');
-  }
 }
 
 // Focus map on selected kabupaten
@@ -329,20 +274,7 @@ function openModal(id) {
   document.getElementById(`modal-${id}`).classList.add('active');
 }
 
-function closeModal(id) {
-  document.getElementById(`modal-${id}`).classList.remove('active');
-}
-
-function confirmAbate() {
-  showToast(`Perintah Preemptive Abatization telah dikirim untuk ${selectedKabupaten}!`, 'success');
-  closeModal('abate');
-}
-
-function confirmBroadcast() {
-  showToast(`Simulasi Broadcast Blast WA berhasil dikirim ke warga ${selectedKabupaten}!`, 'success');
-  closeModal('broadcast');
-}
-
+// Toast info
 function showToast(msg, type='info') {
   const container = document.getElementById('toast-container');
   if(!container) return;
@@ -355,11 +287,6 @@ function showToast(msg, type='info') {
     setTimeout(() => t.remove(), 300);
   }, 3000);
 }
-
-// Keep track of user closing sidebar manually
-document.querySelector('.golden-close').addEventListener('click', () => {
-  goldenSidebar.classList.add('closed-by-user');
-});
 
 // Init
 initMap();
